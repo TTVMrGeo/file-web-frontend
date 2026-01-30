@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Resource | Get Your Free File</title>
+    <meta name="description" content="Enter your information to download the file">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-file-download"></i> Download Your Resource</h1>
+            <p class="description">Enter your information below to download the file. We'll add you to our contact list and start your download.</p>
+        </header>
+        
+        <main class="main-content">
+            <div class="contact-form">
+                <div class="form-group">
+                    <div class="name-fields">
+                        <div class="input-group">
+                            <label for="firstName">
+                                <i class="fas fa-user"></i> First Name <span class="required">*</span>
+                            </label>
+                            <input type="text" id="firstName" class="form-input" placeholder="Enter your first name" required>
+                            <div id="firstNameMessage" class="validation-message"></div>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="lastName">
+                                <i class="fas fa-user"></i> Last Name <span class="required">*</span>
+                            </label>
+                            <input type="text" id="lastName" class="form-input" placeholder="Enter your last name" required>
+                            <div id="lastNameMessage" class="validation-message"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Email Address <span class="required">*</span>
+                        </label>
+                        <input type="email" id="email" class="form-input" placeholder="Enter your email address" required>
+                        <div id="emailMessage" class="validation-message"></div>
+                    </div>
+                    
+                    <div class="privacy-notice">
+                        <i class="fas fa-shield-alt"></i>
+                        <p>Your information is secure. We respect your privacy and will only use your email to send you relevant updates.</p>
+                    </div>
+                </div>
+                
+                <button id="downloadBtn" class="download-btn" disabled>
+                    <i class="fas fa-download"></i> Download Now
+                </button>
+                
+                <div id="statusMessage" class="status-message">
+                    <div class="status-icon">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <div class="status-text">Adding you to our list and preparing your download...</div>
+                </div>
+                
+                <div id="successMessage" class="success-message">
+                    <i class="fas fa-check-circle"></i> <span id="successText">Success! Your download is starting...</span>
+                </div>
+                
+                <div id="errorMessage" class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="errorText">Something went wrong. Please try again.</span>
+                </div>
+            </div>
+            
+            <div class="file-info">
+                <h3><i class="fas fa-file-alt"></i> What You're Downloading</h3>
+                <p>This comprehensive guide contains everything you need to get started. It's a carefully curated resource that thousands have found valuable.</p>
+                
+                <div class="file-details">
+                    <div class="file-icon">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="file-info-text">
+                        <div class="file-name"><strong>File:</strong> <span id="fileNameDisplay">Valuable-Resource.pdf</span></div>
+                        <div class="file-size"><strong>Size:</strong> <span id="fileSizeDisplay">1.5 MB</span></div>
+                        <div class="file-type"><strong>Format:</strong> PDF Document</div>
+                        <div class="file-pages"><strong>Pages:</strong> 24 pages of detailed content</div>
+                    </div>
+                </div>
+                
+                <div class="features">
+                    <h4><i class="fas fa-star"></i> What's Inside:</h4>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> Step-by-step instructions</li>
+                        <li><i class="fas fa-check-circle"></i> Practical examples and templates</li>
+                        <li><i class="fas fa-check-circle"></i> Expert tips and best practices</li>
+                        <li><i class="fas fa-check-circle"></i> Resources for further learning</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="footer">
+            <p><i class="fas fa-info-circle"></i> Your download will begin automatically after processing. If it doesn't start, check your browser's download folder.</p>
+            <p class="footer-note">This service is provided for educational purposes. © <span id="currentYear"></span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
