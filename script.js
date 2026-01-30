@@ -1,211 +1,372 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Form elements
-    const firstNameInput = document.getElementById('firstName');
-    const lastNameInput = document.getElementById('lastName');
-    const emailInput = document.getElementById('email');
-    const downloadBtn = document.getElementById('downloadBtn');
+    // Configuration - MUST UPDATE THESE FOR DEPLOYMENT
+    const CONFIG = {
+        // Your Railway backend URL (REQUIRED - update this!)
+        BACKEND_URL: 'https://your-project-name.up.railway.app',
+        
+        // Your file name (update to match your actual file)
+        FILE_NAME: 'Valuable-Resource.pdf',
+        
+        // Display names (can customize)
+        FILE_DISPLAY_NAME: 'Valuable Resource',
+        FILE_SIZE: '1.5 MB',
+        
+        // Timeouts (in milliseconds)
+        API_TIMEOUT: 10000, // 10 seconds
+        SUCCESS_MESSAGE_DURATION: 5000, // 5 seconds
+        ERROR_MESSAGE_DURATION: 5000 // 5 seconds
+    };
     
-    // Messages
-    const firstNameMessage = document.getElementById('firstNameMessage');
-    const lastNameMessage = document.getElementById('lastNameMessage');
-    const emailMessage = document.getElementById('emailMessage');
-    const statusMessage = document.getElementById('statusMessage');
-    const successMessage = document.getElementById('successMessage');
-    const successText = document.getElementById('successText');
-    const errorMessage = document.getElementById('errorMessage');
-    const errorText = document.getElementById('errorText');
+    // DOM Elements
+    const elements = {
+        form: {
+            firstName: document.getElementById('firstName'),
+            lastName: document.getElementById('lastName'),
+            email: document.getElementById('email')
+        },
+        messages: {
+            firstName: document.getElementById('firstNameMessage'),
+            lastName: document.getElementById('lastNameMessage'),
+            email: document.getElementById('emailMessage'),
+            status: document.getElementById('statusMessage'),
+            success: document.getElementById('successMessage'),
+            successText: document.getElementById('successText'),
+            error: document.getElementById('errorMessage'),
+            errorText: document.getElementById('errorText')
+        },
+        buttons: {
+            download: document.getElementById('downloadBtn')
+        },
+        display: {
+            fileName: document.getElementById('fileNameDisplay'),
+            fileSize: document.getElementById('fileSizeDisplay'),
+            currentYear: document.getElementById('currentYear')
+        }
+    };
     
-    // Configuration - UPDATE THESE FOR DEPLOYMENT
-    const BACKEND_URL = 'https://your-backend-url.herokuapp.com'; // CHANGE THIS
-    const FILE_NAME = 'your-file.pdf'; // CHANGE THIS to your actual file
+    // Initialize
+    init();
     
-    // Email validation regex pattern
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    // Functions
+    function init() {
+        // Set current year in footer
+        if (elements.display.currentYear) {
+            elements.display.currentYear.textContent = new Date().getFullYear();
+        }
+        
+        // Set file display names
+        if (elements.display.fileName) {
+            elements.display.fileName.textContent = CONFIG.FILE_DISPLAY_NAME;
+        }
+        if (elements.display.fileSize) {
+            elements.display.fileSize.textContent = CONFIG.FILE_SIZE;
+        }
+        
+        // Set button text
+        updateButtonText();
+        
+        // Add event listeners
+        setupEventListeners();
+        
+        // Log configuration (for debugging)
+        console.log('Frontend initialized with config:', {
+            backendUrl: CONFIG.BACKEND_URL,
+            fileName: CONFIG.FILE_NAME,
+            apiTimeout: CONFIG.API_TIMEOUT
+        });
+        
+        // Check backend connectivity
+        checkBackendHealth();
+    }
     
-    // Add event listeners to form inputs
-    firstNameInput.addEventListener('input', validateForm);
-    lastNameInput.addEventListener('input', validateForm);
-    emailInput.addEventListener('input', validateForm);
+    function setupEventListeners() {
+        // Form input validation
+        Object.values(elements.form).forEach(input => {
+            input.addEventListener('input', validateForm);
+            input.addEventListener('blur', validateField);
+        });
+        
+        // Download button
+        elements.buttons.download.addEventListener('click', processDownload);
+        
+        // Enter key support
+        document.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !elements.buttons.download.disabled) {
+                elements.buttons.download.click();
+            }
+        });
+    }
     
-    // Download file when button is clicked
-    downloadBtn.addEventListener('click', function() {
-        processAndDownload();
-    });
+    // Validation Functions
+    function validateField(event) {
+        const input = event.target;
+        const value = input.value.trim();
+        
+        if (input.id === 'email') {
+            validateEmail(value, input);
+        } else if (input.id === 'firstName' || input.id === 'lastName') {
+            validateName(value, input);
+        }
+        
+        validateForm();
+    }
     
-    // Function to validate the entire form
     function validateForm() {
-        let isValid = true;
+        const isValid = 
+            validateName(elements.form.firstName.value.trim(), elements.form.firstName) &&
+            validateName(elements.form.lastName.value.trim(), elements.form.lastName) &&
+            validateEmail(elements.form.email.value.trim(), elements.form.email);
         
-        // Validate first name
-        const firstName = firstNameInput.value.trim();
-        if (firstName === '' || firstName.length < 2) {
-            markInvalid(firstNameInput, firstNameMessage, 'First name must be at least 2 characters');
-            isValid = false;
-        } else {
-            markValid(firstNameInput, firstNameMessage);
-        }
-        
-        // Validate last name
-        const lastName = lastNameInput.value.trim();
-        if (lastName === '' || lastName.length < 2) {
-            markInvalid(lastNameInput, lastNameMessage, 'Last name must be at least 2 characters');
-            isValid = false;
-        } else {
-            markValid(lastNameInput, lastNameMessage);
-        }
-        
-        // Validate email
-        const email = emailInput.value.trim();
-        if (email === '' || !emailRegex.test(email)) {
-            markInvalid(emailInput, emailMessage, 'Please enter a valid email address');
-            isValid = false;
-        } else {
-            markValid(emailInput, emailMessage, 'Valid email format');
-        }
-        
-        // Update download button state
-        downloadBtn.disabled = !isValid;
-        downloadBtn.innerHTML = isValid 
-            ? `<i class="fas fa-download"></i> Download ${FILE_NAME}`
-            : '<i class="fas fa-download"></i> Download File';
+        elements.buttons.download.disabled = !isValid;
+        updateButtonText();
         
         return isValid;
     }
     
-    // Function to process form and download file
-    async function processAndDownload() {
+    function validateName(value, input) {
+        const messageElement = elements.messages[input.id];
+        
+        if (!value) {
+            showValidation(input, messageElement, 'This field is required', false);
+            return false;
+        }
+        
+        if (value.length < 2) {
+            showValidation(input, messageElement, 'Must be at least 2 characters', false);
+            return false;
+        }
+        
+        showValidation(input, messageElement, 'Looks good!', true);
+        return true;
+    }
+    
+    function validateEmail(value, input) {
+        const messageElement = elements.messages.email;
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        
+        if (!value) {
+            showValidation(input, messageElement, 'Email is required', false);
+            return false;
+        }
+        
+        if (!emailRegex.test(value)) {
+            showValidation(input, messageElement, 'Please enter a valid email', false);
+            return false;
+        }
+        
+        showValidation(input, messageElement, 'Valid email', true);
+        return true;
+    }
+    
+    function showValidation(input, messageElement, text, isValid) {
+        input.classList.remove('valid', 'invalid');
+        input.classList.add(isValid ? 'valid' : 'invalid');
+        
+        messageElement.innerHTML = `<i class="fas fa-${isValid ? 'check' : 'exclamation'}-circle"></i> ${text}`;
+        messageElement.className = `validation-message ${isValid ? 'valid' : 'invalid'}`;
+    }
+    
+    // Main Download Process
+    async function processDownload() {
         if (!validateForm()) {
-            showError('Please fill in all fields correctly.');
+            showError('Please fix the errors in the form');
             return;
         }
         
-        const firstName = firstNameInput.value.trim();
-        const lastName = lastNameInput.value.trim();
-        const email = emailInput.value.trim();
+        // Get form data
+        const formData = {
+            email: elements.form.email.value.trim(),
+            firstName: elements.form.firstName.value.trim(),
+            lastName: elements.form.lastName.value.trim()
+        };
         
-        // Hide any previous messages
-        successMessage.classList.remove('show');
-        errorMessage.classList.remove('show');
-        
-        // Show processing status
-        statusMessage.classList.add('show');
-        downloadBtn.disabled = true;
-        downloadBtn.classList.add('pulsing');
+        // Show loading state
+        showLoading(true);
+        hideMessages();
         
         try {
-            // Step 1: Call backend to create contact in SendFox
-            const contactResult = await callBackend(email, firstName, lastName);
+            // Step 1: Create contact in SendFox via backend
+            const contactResult = await createContact(formData);
             
             if (contactResult.success) {
-                successText.textContent = `Contact added successfully! Downloading ${FILE_NAME}...`;
-                successMessage.classList.add('show');
-                statusMessage.classList.remove('show');
+                // Step 2: Show success and download file
+                showSuccess('Contact added successfully! Starting download...');
                 
-                // Step 2: Download the file
+                // Small delay for better UX
                 setTimeout(() => {
-                    downloadFile(FILE_NAME);
+                    downloadFile();
+                    showSuccess(`Download started! Check your downloads folder for "${CONFIG.FILE_DISPLAY_NAME}"`);
                 }, 1000);
                 
-                // Reset form after 5 seconds
+                // Reset form after delay
                 setTimeout(() => {
                     resetForm();
-                }, 5000);
+                    showLoading(false);
+                }, CONFIG.SUCCESS_MESSAGE_DURATION);
+                
             } else {
-                throw new Error(contactResult.message || 'Failed to create contact');
+                throw new Error(contactResult.message || 'Failed to process your request');
             }
+            
         } catch (error) {
+            showLoading(false);
             showError(error.message);
-            statusMessage.classList.remove('show');
-            downloadBtn.disabled = false;
-            downloadBtn.classList.remove('pulsing');
+            
+            // Auto-hide error after duration
+            setTimeout(() => {
+                hideMessages();
+            }, CONFIG.ERROR_MESSAGE_DURATION);
         }
     }
     
-    // Function to call backend API
-    async function callBackend(email, firstName, lastName) {
+    // API Functions
+    async function createContact(formData) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT);
+        
         try {
-            const response = await fetch(`${BACKEND_URL}/api/create-sendfox-contact`, {
+            const response = await fetch(`${CONFIG.BACKEND_URL}/api/create-contact`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify({
-                    email: email,
-                    firstName: firstName,
-                    lastName: lastName
-                })
+                body: JSON.stringify(formData),
+                signal: controller.signal
             });
             
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                let errorMessage = `Server error: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    // Couldn't parse JSON error
+                }
+                throw new Error(errorMessage);
             }
             
             return await response.json();
+            
         } catch (error) {
-            console.error('Error calling backend:', error);
-            throw new Error('Failed to connect to the server. Please try again.');
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Request timed out. Please check your connection and try again.');
+            } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                throw new Error('Cannot connect to server. Please check your internet connection.');
+            }
+            
+            throw error;
         }
     }
     
-    // Function to download file
-    function downloadFile(filename) {
-        // Option 1: If file is hosted on GitHub Pages
-        // const fileUrl = `https://your-username.github.io/your-repo/${filename}`;
-        
-        // Option 2: If file is hosted on backend
-        const fileUrl = `${BACKEND_URL}/files/${filename}`;
-        
-        // Option 3: If file is in the same repo (for GitHub Pages)
-        const link = document.createElement('a');
-        link.href = filename;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Update success message
-        setTimeout(() => {
-            successText.textContent = `Contact added and ${filename} downloaded successfully!`;
-        }, 500);
+    async function checkBackendHealth() {
+        try {
+            const response = await fetch(`${CONFIG.BACKEND_URL}/api/health`, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            if (response.ok) {
+                console.log('Backend health check: OK');
+            } else {
+                console.warn('Backend health check: Failed', response.status);
+            }
+        } catch (error) {
+            console.warn('Backend health check: Cannot connect', error.message);
+        }
     }
     
-    // Helper functions
-    function markValid(input, messageElement, text = 'Valid') {
-        input.classList.remove('invalid');
-        input.classList.add('valid');
-        messageElement.innerHTML = `<i class="fas fa-check-circle"></i> ${text}`;
-        messageElement.className = 'validation-message valid';
+    // File Download
+    function downloadFile() {
+        try {
+            // Option A: Download from backend (recommended for larger files)
+            // window.location.href = `${CONFIG.BACKEND_URL}/files/${CONFIG.FILE_NAME}`;
+            
+            // Option B: Download from same origin (file must be in GitHub Pages repo)
+            const link = document.createElement('a');
+            link.href = CONFIG.FILE_NAME;
+            link.download = CONFIG.FILE_NAME;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Log download attempt
+            console.log('Download initiated for:', CONFIG.FILE_NAME);
+            
+        } catch (error) {
+            console.error('Download failed:', error);
+            showError('Download failed. Please try again or contact support.');
+        }
     }
     
-    function markInvalid(input, messageElement, text) {
-        input.classList.remove('valid');
-        input.classList.add('invalid');
-        messageElement.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${text}`;
-        messageElement.className = 'validation-message invalid';
+    // UI Helper Functions
+    function showLoading(show) {
+        if (show) {
+            elements.messages.status.classList.add('show');
+            elements.buttons.download.disabled = true;
+            elements.buttons.download.classList.add('pulsing');
+        } else {
+            elements.messages.status.classList.remove('show');
+            elements.buttons.download.classList.remove('pulsing');
+        }
+    }
+    
+    function showSuccess(message) {
+        elements.messages.successText.textContent = message;
+        elements.messages.success.classList.add('show');
+        elements.messages.error.classList.remove('show');
     }
     
     function showError(message) {
-        errorText.textContent = message;
-        errorMessage.classList.add('show');
-        setTimeout(() => errorMessage.classList.remove('show'), 5000);
+        elements.messages.errorText.textContent = message;
+        elements.messages.error.classList.add('show');
+        elements.messages.success.classList.remove('show');
+    }
+    
+    function hideMessages() {
+        elements.messages.status.classList.remove('show');
+        elements.messages.success.classList.remove('show');
+        elements.messages.error.classList.remove('show');
+    }
+    
+    function updateButtonText() {
+        const isDisabled = elements.buttons.download.disabled;
+        elements.buttons.download.innerHTML = isDisabled
+            ? '<i class="fas fa-download"></i> Download File'
+            : `<i class="fas fa-download"></i> Download ${CONFIG.FILE_DISPLAY_NAME}`;
     }
     
     function resetForm() {
-        firstNameInput.value = '';
-        lastNameInput.value = '';
-        emailInput.value = '';
-        
-        [firstNameInput, lastNameInput, emailInput].forEach(input => {
+        // Clear form values
+        Object.values(elements.form).forEach(input => {
+            input.value = '';
             input.classList.remove('valid', 'invalid');
         });
         
-        [firstNameMessage, lastNameMessage, emailMessage].forEach(msg => {
-            msg.textContent = '';
+        // Clear messages
+        Object.values(elements.messages).forEach(message => {
+            if (message.classList && message !== elements.messages.successText && message !== elements.messages.errorText) {
+                message.textContent = '';
+                message.className = 'validation-message';
+            }
         });
         
-        successMessage.classList.remove('show');
-        downloadBtn.disabled = true;
-        downloadBtn.classList.remove('pulsing');
-        downloadBtn.innerHTML = '<i class="fas fa-download"></i> Download File';
+        // Reset button
+        elements.buttons.download.disabled = true;
+        updateButtonText();
+        
+        // Hide all status messages
+        hideMessages();
+        
+        // Focus on first field
+        elements.form.firstName.focus();
     }
+    
+    // Make config available globally for debugging
+    window.appConfig = CONFIG;
 });
